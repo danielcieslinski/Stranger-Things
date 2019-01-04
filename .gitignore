@@ -1,6 +1,8 @@
 .idea
 CMakeLists.txt
 cmake-build-debug/
+out/
+anita.c
 # Prerequisites
 *.d
 
