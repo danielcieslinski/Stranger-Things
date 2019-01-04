@@ -8,15 +8,15 @@
 
 #define n_of_barbers 3
 #define n_of_chairs 2
-#define capacity_of_waiting_room 5
-#define n_of_customers 5
+#define queue_size 5
+#define n_of_customers 10
 
 //Time constants | time shall be given in seconds
-#define max_time_of_customer_working 5
-#define time_of_haircut 3
+#define max_time_of_customer_working 10
+#define time_of_haircut 10
 
 struct Utils {
-    int queue_msg, customer_msg, sleeping_barbers, free_chairs, customers_processing;
+    int queue_msg, customer_msg, sleeping_barbers, free_chairs, customers_processing, queue_sem;
 };
 
 struct msgbuf {

@@ -28,9 +28,24 @@ void haircut(int barber_id, int customer_id, struct Utils utils) {
     sem_up(utils.free_chairs, 0); //Free chair
     sem_up(utils.customers_processing, customer_id); //Free customer
 
+
     /* Change counting comes here */
 
+    printf("Barber %d finished haircut to %d customer \n", barber_id, customer_id);
 }
+
+int barber_check_queue(struct Utils utils){
+    sem_down_wait(utils.sleeping_barbers, 0);
+    struct msgbuf message;
+
+    if (msgrcv(utils.queue_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) == -1)
+        return -1;
+
+    sem_up(utils.queue_sem, 0);
+    return message.mvalue;
+}
+
+//msgrecv returs -1 if there is nothing in to recv
 
 void barber(int barber_id, struct Utils utils) {
 
@@ -38,9 +53,14 @@ void barber(int barber_id, struct Utils utils) {
     struct msgbuf message;
 
     while (true) {
-        while (msgrcv(utils.customer_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) == -1); //Wait and select
-        haircut(barber_id, message.mvalue, utils);
-        sem_up(utils.sleeping_barbers, 0);
+        int customer_to_cut = barber_check_queue(utils);
+        if (customer_to_cut == -1) {
+            sem_up(utils.sleeping_barbers, 0);
+            while (msgrcv(utils.customer_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) == -1); //If nobody in queue, sleep
+            customer_to_cut = message.mvalue;
+        }
+
+        haircut(barber_id, customer_to_cut, utils);
     }
 
 }
@@ -69,10 +89,18 @@ void customer(int customer_id, struct Utils utils) {
         printf("Customer %d is ready and wants haircut \n", customer_id);
 
         if (sem_down_nowait(utils.sleeping_barbers, 0)) { //wake up barber, if no free skip
+            printf("Customer %d wakes up barber \n", customer_id);
             msgsnd(utils.customer_msg, &message, sizeof(message.mvalue), 0);
-            printf("coustomer %d waits \n", customer_id);
             sem_down_wait(utils.customers_processing, customer_id);
-            printf("coustomer %d freed \n", customer_id);
+        } else {
+            if(sem_down_nowait(utils.queue_sem, 0)){
+                //There is place in queue
+                printf("Customer %d waits in queue \n", customer_id);
+                msgsnd(utils.queue_msg , &message, sizeof(message.mvalue), 0);
+                sem_down_wait(utils.customers_processing, customer_id); //Waits in queue and is given haircut
+                sem_up(utils.customers_processing, customer_id);
+            }
+            printf("Skiping queue %d \n", customer_id);
         }
 
 
@@ -97,6 +125,7 @@ int main() {
 //    int queue_msg = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); //Clients queue
 
     for (int i = 0; i < to_gen; i++) {
+        sleep(1);
         if (fork() == 0) {
 
             if (i < n_of_barbers)
