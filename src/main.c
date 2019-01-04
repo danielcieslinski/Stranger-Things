@@ -14,34 +14,23 @@
 #include <errno.h>
 #include <string.h>
 
+#include "Utilities.h"
 
-int n_of_barbers = 5;
-int n_of_chairs = 5;
-int capacity_of_waiting_room = 5;
-int n_of_customers = 5;
 
-//Time constants | time shall be given in seconds
-int max_time_of_customer_working = 5;
+void haircut(int barber_id, int customer_id, struct Utils utils) {
+    printf("Barber %d gives new haircut to %d customer \n", barber_id, customer_id);
+    sem_down_wait(utils.free_chairs, 0); //Wait for chair
 
-struct Utils {
-    int queue_msg, customer_msg;
-};
+    /*Cash will come here */
 
-struct msgbuf {
-    long mtype; //typ komunikatu
-    int mvalue; //treść komunikatu
-};
+    sleep(time_of_haircut); //Give haircut
 
-struct Utils utils_initializer() {
+    sem_up(utils.free_chairs, 0); //Free chair
+    sem_up(utils.customers_processing, customer_id); //Free customer
 
-    struct Utils utils;
-    utils.customer_msg=msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); //
+    /* Change counting comes here */
 
-    printf("utils initislized \n");
-
-    return utils;
-
-};
+}
 
 void barber(int barber_id, struct Utils utils) {
 
@@ -49,8 +38,9 @@ void barber(int barber_id, struct Utils utils) {
     struct msgbuf message;
 
     while (true) {
-        while(msgrcv(utils.customer_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) == -1) {}
-        printf("Barber %d gives new haircut to %d customer \n",barber_id,  message.mvalue);
+        while (msgrcv(utils.customer_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) == -1); //Wait and select
+        haircut(barber_id, message.mvalue, utils);
+        sem_up(utils.sleeping_barbers, 0);
     }
 
 }
@@ -77,7 +67,15 @@ void customer(int customer_id, struct Utils utils) {
     while (true) {
         customer_works(wallet);
         printf("Customer %d is ready and wants haircut \n", customer_id);
-        msgsnd(utils.customer_msg, &message, sizeof(message.mvalue), 0);
+
+        if (sem_down_nowait(utils.sleeping_barbers, 0)) { //wake up barber, if no free skip
+            msgsnd(utils.customer_msg, &message, sizeof(message.mvalue), 0);
+            printf("coustomer %d waits \n", customer_id);
+            sem_down_wait(utils.customers_processing, customer_id);
+            printf("coustomer %d freed \n", customer_id);
+        }
+
+
     }
 }
 
@@ -86,11 +84,11 @@ int main() {
 
     int to_gen = n_of_barbers + n_of_customers;
     struct Utils utils = utils_initializer();
+    //semget drugi argument to ilosc w tablicy
 
 //    int customer_msg = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600);
 //
-//    int sleeping_barbers_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600); //wolni fryzjerzy
-//    semctl(sleeping_barbers_sem, 0, SETVAL, B);
+//    int sleeping_barbers_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600);
 //
 //    int chair_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); //wolne krzesła
 //    semctl(chair_sem, 0, SETVAL, N);
