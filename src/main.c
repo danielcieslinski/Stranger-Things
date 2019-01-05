@@ -12,7 +12,6 @@
 #include <zconf.h>
 #include <signal.h>
 #include <errno.h>
-#include <string.h>
 
 #include "Utilities.h"
 
@@ -20,6 +19,7 @@
 void haircut(int barber_id, int customer_id, struct Utils utils) {
     printf("Barber %d gives new haircut to %d customer \n", barber_id, customer_id);
     sem_down_wait(utils.free_chairs, 0); //Wait for chair
+    printf("Barber %d found chair \n", barber_id);
 
     /*Cash will come here */
 
@@ -35,7 +35,7 @@ void haircut(int barber_id, int customer_id, struct Utils utils) {
 }
 
 int barber_check_queue(struct Utils utils){
-    sem_down_nowait(utils.sleeping_barbers, 0);
+//    sem_down_nowait(utils.sleeping_barbers, 0);
     struct msgbuf message;
 
     if (msgrcv(utils.queue_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) == -1)
@@ -56,6 +56,7 @@ void barber(int barber_id, struct Utils utils) {
         int customer_to_cut = barber_check_queue(utils);
         if (customer_to_cut == -1) {
             sem_up(utils.sleeping_barbers, 0);
+            printf("Barber %d goes to sleep \n", barber_id);
             while (msgrcv(utils.customer_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) == -1); //If nobody in queue, sleep
             customer_to_cut = message.mvalue;
             printf("Customer %d wakes up barber %d \n", customer_to_cut, barber_id);
