@@ -35,7 +35,7 @@ void haircut(int barber_id, int customer_id, struct Utils utils) {
 }
 
 int barber_check_queue(struct Utils utils){
-    sem_down_wait(utils.sleeping_barbers, 0);
+    sem_down_nowait(utils.sleeping_barbers, 0);
     struct msgbuf message;
 
     if (msgrcv(utils.queue_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) == -1)
@@ -58,6 +58,7 @@ void barber(int barber_id, struct Utils utils) {
             sem_up(utils.sleeping_barbers, 0);
             while (msgrcv(utils.customer_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) == -1); //If nobody in queue, sleep
             customer_to_cut = message.mvalue;
+            printf("Customer %d wakes up barber %d \n", customer_to_cut, barber_id);
         }
 
         haircut(barber_id, customer_to_cut, utils);
@@ -89,18 +90,16 @@ void customer(int customer_id, struct Utils utils) {
         printf("Customer %d is ready and wants haircut \n", customer_id);
 
         if (sem_down_nowait(utils.sleeping_barbers, 0)) { //wake up barber, if no free skip
-            printf("Customer %d wakes up barber \n", customer_id);
+            printf("Customer %d send info to wake up barber \n", customer_id);
             msgsnd(utils.customer_msg, &message, sizeof(message.mvalue), 0);
             sem_down_wait(utils.customers_processing, customer_id);
         } else {
-            if(sem_down_nowait(utils.queue_sem, 0)){
+            if(sem_down_nowait(utils.queue_sem, 0)) {
                 //There is place in queue
                 printf("Customer %d waits in queue \n", customer_id);
-                msgsnd(utils.queue_msg , &message, sizeof(message.mvalue), 0);
+                msgsnd(utils.queue_msg, &message, sizeof(message.mvalue), 0);
                 sem_down_wait(utils.customers_processing, customer_id); //Waits in queue and is given haircut
-                sem_up(utils.customers_processing, customer_id);
-            }
-            printf("Skiping queue %d \n", customer_id);
+            } else printf("Customer %d skiping queue \n", customer_id);
         }
 
 
