@@ -26,7 +26,7 @@ struct Utils utils_initializer() {
 
     utils.sleeping_barbers = semget(IPC_PRIVATE, 1,
                                     IPC_CREAT | IPC_EXCL | 0600); // Holds info on how many barbers are free
-    semctl(utils.sleeping_barbers, 0, SETVAL, n_of_barbers);
+    semctl(utils.sleeping_barbers, 0, SETVAL, 0);
 
 
     utils.free_chairs = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600); // Holds info on how many chairs are
@@ -40,6 +40,9 @@ struct Utils utils_initializer() {
     semctl(utils.queue_sem, 0, SETVAL, queue_size);
 
     utils.queue_msg = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); // Customers in queue
+
+    utils.queue_lock = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600); // Holds info on free chairs in waiting room
+    semctl(utils.queue_lock, 0, SETVAL, 0);
 
     return utils;
 

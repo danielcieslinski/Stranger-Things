@@ -54,6 +54,7 @@ void barber(int barber_id, struct Utils utils) {
 
     while (true) {
         int customer_to_cut = barber_check_queue(utils);
+        sem_up(utils.queue_lock, 0);
         if (customer_to_cut == -1) {
             sem_up(utils.sleeping_barbers, 0);
             printf("Barber %d goes to sleep \n", barber_id);
@@ -90,6 +91,8 @@ void customer(int customer_id, struct Utils utils) {
         customer_works(wallet);
         printf("Customer %d is ready and wants haircut \n", customer_id);
 
+        sem_down_wait(utils.queue_lock, 0); //Wait until barber finishes queue check, blocks parallelity a bit, but works well
+
         if (sem_down_nowait(utils.sleeping_barbers, 0)) { //wake up barber, if no free skip
             printf("Customer %d send info to wake up barber \n", customer_id);
             msgsnd(utils.customer_msg, &message, sizeof(message.mvalue), 0);
@@ -125,7 +128,7 @@ int main() {
 //    int queue_msg = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); //Clients queue
 
     for (int i = 0; i < to_gen; i++) {
-        sleep(1);
+//        sleep(1);
         if (fork() == 0) {
 
             if (i < n_of_barbers)

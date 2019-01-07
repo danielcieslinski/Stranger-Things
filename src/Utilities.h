@@ -13,10 +13,10 @@
 
 //Time constants | time shall be given in seconds
 #define max_time_of_customer_working 10
-#define time_of_haircut 1
+#define time_of_haircut 5
 
 struct Utils {
-    int queue_msg, customer_msg, sleeping_barbers, free_chairs, customers_processing, queue_sem;
+    int queue_msg, customer_msg, sleeping_barbers, free_chairs, customers_processing, queue_sem, queue_lock;
 };
 
 struct msgbuf {
