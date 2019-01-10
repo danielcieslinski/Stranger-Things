@@ -11,17 +11,69 @@
 #include <zconf.h>
 #include <signal.h>
 #include <errno.h>
-#include <pthread.h>
 
 #include "Utilities.h"
 
+void copy_arr(int *copy, const int *to_copy, int elems) {
+    for (int i = 0; i < elems; i++)
+        copy[i] = to_copy[i];
+}
+
+int calculate_change(int customer_id, int to_change, struct Utils utils){
+    int denominations[3] = {1, 2, 5};
+
+    for (int i = 2; i >= 0; i++) {
+        while (to_change - denominations[i] >= 0 && utils.cashbox[i] > 0) {
+            to_change -= denominations[i];
+            wallet_copy[i]--;
+            utils.cashbox[i]++;
+        }
+    }
+
+
+}
+
+
+int take_payment(int customer_id, struct Utils utils) {
+    int denominations[3] = {1, 2, 5};
+    int to_pay = haircut_price;
+
+    //copy wallet in case of trying many permutations
+    int wallet_copy[3];
+    copy_arr(wallet_copy, utils.wallets[customer_id], 3);
+
+    //Try the exact
+    for (int i = 2; i >= 0; i++) {
+        while (to_pay - denominations[i] >= 0 && wallet_copy[i] > 0) {
+            to_pay -= denominations[i];
+            wallet_copy[i]--;
+            utils.cashbox[i]++;
+        }
+    }
+
+    //Check if could pay, if couldn't, pay more
+    if (to_pay != 0) {
+        for (int i = 2; i >= 0; i++) {
+            while (to_pay > 0 && wallet_copy[i] > 0) {
+                to_pay -= denominations[i];
+                wallet_copy[i]--;
+                utils.cashbox[i]++;
+            }
+        }
+    }
+
+    for (int i = 0; i <3; i++)
+        utils.wallets[customer_id][i] = wallet_copy[i];
+
+    return abs(to_pay);
+}
 
 void haircut(int barber_id, int customer_id, struct Utils utils) {
     printf("Barber %d gives new haircut to %d customer \n", barber_id, customer_id);
     sem_down_wait(utils.free_chairs, 0); //Wait for chair
     printf("Barber %d found chair \n", barber_id);
 
-    /*Cash will come here */
+    int to_change = take_payment(customer_id, utils);
 
     sleep(time_of_haircut); //Give haircut
 
@@ -30,6 +82,7 @@ void haircut(int barber_id, int customer_id, struct Utils utils) {
 
 
     /* Change counting comes here */
+
 
     printf("Barber %d finished haircut to %d customer \n", barber_id, customer_id);
 }
@@ -45,8 +98,6 @@ int barber_check_queue(struct Utils utils) {
     return message.mvalue;
 }
 
-//msgrecv returs -1 if there is nothing in to recv
-
 void barber(int barber_id, struct Utils utils) {
 
     printf("New barber %d \n", barber_id);
@@ -58,7 +109,8 @@ void barber(int barber_id, struct Utils utils) {
         if (customer_to_cut == -1) {
             sem_up(utils.sleeping_barbers, 0);
             printf("Barber %d goes to sleep \n", barber_id);
-            while (msgrcv(utils.customer_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) == -1); //If nobody in queue, sleep
+            while (msgrcv(utils.customer_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) ==
+                   -1); //If nobody in queue, sleep
             customer_to_cut = message.mvalue;
             printf("Customer %d wakes up barber %d \n", customer_to_cut, barber_id);
         }
@@ -73,7 +125,8 @@ void customer_works(int customer_id, struct Utils utils) {
         utils.wallets[customer_id][i] += rand() % 3 + 1;
 
 
-    printf("Customers %d wallet %d %d %d \n", customer_id, utils.wallets[customer_id][0], utils.wallets[customer_id][1], utils.wallets[customer_id][2]);
+    printf("Customers %d wallet %d %d %d \n", customer_id, utils.wallets[customer_id][0], utils.wallets[customer_id][1],
+           utils.wallets[customer_id][2]);
 
     sleep(rand() % max_time_of_customer_working + 1);
 }
@@ -94,7 +147,8 @@ void customer(int customer_id, struct Utils utils) {
         customer_works(customer_id, utils);
         printf("Customer %d is ready and wants haircut \n", customer_id);
 
-        sem_down_wait(utils.queue_lock, 0); //Wait until barber finishes queue check, blocks parallelity a bit, but works well
+        sem_down_wait(utils.queue_lock,
+                      0); //Wait until barber finishes queue check, blocks parallelity a bit, but works well
 
         if (sem_down_nowait(utils.sleeping_barbers, 0)) { //wake up barber, if no free skip
             printf("Customer %d send info to wake up barber \n", customer_id);
