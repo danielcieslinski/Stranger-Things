@@ -44,6 +44,12 @@ struct Utils utils_initializer() {
     utils.queue_lock = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600); // Holds info on free chairs in waiting room
     semctl(utils.queue_lock, 0, SETVAL, 0);
 
+    utils.cashbox = (int*)shmat(shmget(IPC_PRIVATE, 3 * sizeof(int), IPC_CREAT | IPC_EXCL | 0660), NULL, 0);
+
+    utils.wallets = shmat(shmget(IPC_PRIVATE, sizeof(int[n_of_customers][3]), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
+
+
+
 
     return utils;
 

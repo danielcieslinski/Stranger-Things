@@ -10,13 +10,19 @@
 #define n_of_chairs 2
 #define queue_size 5
 #define n_of_customers 10
+#define haircut_price 8
 
 //Time constants | time shall be given in seconds
 #define max_time_of_customer_working 10
 #define time_of_haircut 5
 
+
 struct Utils {
-    int queue_msg, customer_msg, sleeping_barbers, free_chairs, customers_processing, queue_sem, queue_lock;
+    int queue_msg, customer_msg, sleeping_barbers, free_chairs, customers_processing, queue_sem, queue_lock, cashbox_msg;
+
+    //shared memories
+    int *cashbox;
+    int (*wallets)[n_of_customers];
 };
 
 struct msgbuf {

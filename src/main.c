@@ -34,7 +34,7 @@ void haircut(int barber_id, int customer_id, struct Utils utils) {
     printf("Barber %d finished haircut to %d customer \n", barber_id, customer_id);
 }
 
-int barber_check_queue(struct Utils utils){
+int barber_check_queue(struct Utils utils) {
 //    sem_down_nowait(utils.sleeping_barbers, 0);
     struct msgbuf message;
 
@@ -68,9 +68,12 @@ void barber(int barber_id, struct Utils utils) {
 
 }
 
-void customer_works(int *wallet) {
+void customer_works(int customer_id, struct Utils utils) {
     for (int i = 0; i < 3; ++i)
-        wallet[i] += rand() % 3 + 1;
+        utils.wallets[customer_id][i] += rand() % 3 + 1;
+
+
+    printf("Customers %d wallet %d %d %d \n", customer_id, utils.wallets[customer_id][0], utils.wallets[customer_id][1], utils.wallets[customer_id][2]);
 
     sleep(rand() % max_time_of_customer_working + 1);
 }
@@ -80,7 +83,7 @@ void customer(int customer_id, struct Utils utils) {
     srand(time(NULL) + customer_id);
 
     printf("New customer %d\n", customer_id);
-    int wallet[] = {0, 0, 0};
+//    int wallet[] = {0, 0, 0};
 
     //Message
     struct msgbuf message;
@@ -88,60 +91,41 @@ void customer(int customer_id, struct Utils utils) {
     message.mvalue = customer_id;
 
     while (true) {
-        customer_works(wallet);
+        customer_works(customer_id, utils);
         printf("Customer %d is ready and wants haircut \n", customer_id);
 
         sem_down_wait(utils.queue_lock, 0); //Wait until barber finishes queue check, blocks parallelity a bit, but works well
-        pthread_cond_wait()
 
         if (sem_down_nowait(utils.sleeping_barbers, 0)) { //wake up barber, if no free skip
             printf("Customer %d send info to wake up barber \n", customer_id);
             msgsnd(utils.customer_msg, &message, sizeof(message.mvalue), 0);
             sem_down_wait(utils.customers_processing, customer_id);
         } else {
-            if(sem_down_nowait(utils.queue_sem, 0)) {
+            if (sem_down_nowait(utils.queue_sem, 0)) {
                 //There is place in queue
                 printf("Customer %d waits in queue \n", customer_id);
                 msgsnd(utils.queue_msg, &message, sizeof(message.mvalue), 0);
                 sem_down_wait(utils.customers_processing, customer_id); //Waits in queue and is given haircut
             } else printf("Customer %d skiping queue \n", customer_id);
         }
-
-
     }
 }
 
 
 int main() {
-
     int to_gen = n_of_barbers + n_of_customers;
     struct Utils utils = utils_initializer();
-    //semget drugi argument to ilosc w tablicy
-
-//    int customer_msg = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600);
-//
-//    int sleeping_barbers_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600);
-//
-//    int chair_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); //wolne krzesła
-//    semctl(chair_sem, 0, SETVAL, N);
-//
-//    int customers_sem = semget(IPC_PRIVATE, C, IPC_CREAT | IPC_EXCL | 0600); //0 podczas obługi
-//    int queue_msg = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); //Clients queue
 
     for (int i = 0; i < to_gen; i++) {
         if (fork() == 0) {
-
             if (i < n_of_barbers)
                 barber(i, utils);
 
             else customer(i - n_of_barbers, utils);
-            break;
         }
     }
-
     // Don't allow to leave orphans
     sleep(30000);
-    //
 
     return 0;
 }
