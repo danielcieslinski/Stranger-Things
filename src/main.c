@@ -7,11 +7,11 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/msg.h>
-#include <sys/sem.h>
 #include <sched.h>
 #include <zconf.h>
 #include <signal.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include "Utilities.h"
 
@@ -92,6 +92,7 @@ void customer(int customer_id, struct Utils utils) {
         printf("Customer %d is ready and wants haircut \n", customer_id);
 
         sem_down_wait(utils.queue_lock, 0); //Wait until barber finishes queue check, blocks parallelity a bit, but works well
+        pthread_cond_wait()
 
         if (sem_down_nowait(utils.sleeping_barbers, 0)) { //wake up barber, if no free skip
             printf("Customer %d send info to wake up barber \n", customer_id);
@@ -128,14 +129,12 @@ int main() {
 //    int queue_msg = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); //Clients queue
 
     for (int i = 0; i < to_gen; i++) {
-//        sleep(1);
         if (fork() == 0) {
 
             if (i < n_of_barbers)
                 barber(i, utils);
 
             else customer(i - n_of_barbers, utils);
-
             break;
         }
     }

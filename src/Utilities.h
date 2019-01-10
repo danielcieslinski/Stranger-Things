@@ -27,9 +27,9 @@ struct msgbuf {
 
 bool sem_down_nowait(int semid, int semnum);
 
-bool sem_down_wait(int semid, int semnum);
+void sem_down_wait(int semid, int semnum);
 
-bool sem_up(int semid, int semnum);
+void sem_up(int semid, int semnum);
 
 struct Utils utils_initializer();
 

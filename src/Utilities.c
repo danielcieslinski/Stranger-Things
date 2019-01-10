@@ -44,16 +44,26 @@ struct Utils utils_initializer() {
     utils.queue_lock = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600); // Holds info on free chairs in waiting room
     semctl(utils.queue_lock, 0, SETVAL, 0);
 
+
     return utils;
 
 };
 
-bool sem_down_wait(int semid, int semnum) {
+void sem_down_wait(int semid, int semnum) {
     buf.sem_num = (unsigned short) semnum;
     buf.sem_op = -1;
     buf.sem_flg = 0;
     if (semop(semid, &buf, 1) == -1) {
         printf("Błąd opuszczenia semafora \n");
+    }
+}
+
+void sem_up(int semid, int semnum) {
+    buf.sem_num = (unsigned short) semnum;
+    buf.sem_op = 1;
+    buf.sem_flg = 0;
+    if (semop(semid, &buf, 1) == -1) {
+        printf("Błąd podniesienia semafora \n");
     }
 }
 
@@ -66,13 +76,3 @@ bool sem_down_nowait(int semid, int semnum) {
     //Returns true if sem was decremented, otherwise false
 }
 
-bool sem_up(int semid, int semnum) {
-    buf.sem_num = (unsigned short) semnum;
-    buf.sem_op = 1;
-    buf.sem_flg = 0;
-    if (semop(semid, &buf, 1) == -1) {
-        printf("Błąd podniesienia semafora \n");
-        perror(" Opuszczenie semafora ");
-        perror(errno);
-    }
-}
