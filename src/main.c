@@ -19,18 +19,20 @@ void copy_arr(int *copy, const int *to_copy, int elems) {
         copy[i] = to_copy[i];
 }
 
-int calculate_change(int customer_id, int to_change, struct Utils utils){
+void calculate_change(int customer_id, int to_change, struct Utils utils) {
     int denominations[3] = {1, 2, 5};
 
-    for (int i = 2; i >= 0; i++) {
-        while (to_change - denominations[i] >= 0 && utils.cashbox[i] > 0) {
-            to_change -= denominations[i];
-            wallet_copy[i]--;
-            utils.cashbox[i]++;
+    while (to_change != 0) {
+
+        for (int i = 2; i >= 0; i++) {
+            while (to_change - denominations[i] >= 0 && utils.cashbox[i] > 0) {
+                to_change -= denominations[i];
+                utils.wallets[customer_id][i]++;
+                utils.cashbox[i]--;
+            }
         }
+        /* Add msg receive here */
     }
-
-
 }
 
 
@@ -62,8 +64,10 @@ int take_payment(int customer_id, struct Utils utils) {
         }
     }
 
-    for (int i = 0; i <3; i++)
+    for (int i = 0; i < 3; i++)
         utils.wallets[customer_id][i] = wallet_copy[i];
+
+    /* Add msg send here */
 
     return abs(to_pay);
 }
