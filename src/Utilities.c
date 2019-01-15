@@ -20,6 +20,8 @@ static struct sembuf buf;
 #include "Utilities.h"
 
 
+
+
 struct Utils utils_initializer() {
     struct Utils utils;
     utils.customer_msg = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); // Customers that want haircut
@@ -41,12 +43,17 @@ struct Utils utils_initializer() {
 
     utils.queue_msg = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); // Customers in queue
 
+    utils.cashbox_msg = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); // Customers in queue
+
     utils.queue_lock = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600); // Holds info on free chairs in waiting room
     semctl(utils.queue_lock, 0, SETVAL, 0);
 
     utils.cashbox = (int*)shmat(shmget(IPC_PRIVATE, 3 * sizeof(int), IPC_CREAT | IPC_EXCL | 0660), NULL, 0);
 
     utils.wallets = shmat(shmget(IPC_PRIVATE, sizeof(int[n_of_customers][3]), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
+
+//    utils.= msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); // Customers in queue
+
 
 
 
@@ -82,3 +89,14 @@ bool sem_down_nowait(int semid, int semnum) {
     //Returns true if sem was decremented, otherwise false
 }
 
+void copy_arr(int *copy, const int *to_copy, int elems) {
+    for (int i = 0; i < elems; i++)
+        copy[i] = to_copy[i];
+}
+
+void msg_clear(int id) {
+    struct msgbuf message;
+    int cleared = 0;
+    while (msgrcv(id, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) != -1) { cleared++; }
+//    printf("Cleared, %d \n", cleared);
+}

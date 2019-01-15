@@ -9,7 +9,7 @@
 #define n_of_barbers 3
 #define n_of_chairs 2
 #define queue_size 5
-#define n_of_customers 10
+#define n_of_customers 8
 #define haircut_price 8
 
 //Time constants | time shall be given in seconds
@@ -38,5 +38,9 @@ void sem_down_wait(int semid, int semnum);
 void sem_up(int semid, int semnum);
 
 struct Utils utils_initializer();
+
+void copy_arr(int *copy, const int *to_copy, int elems);
+
+void msg_clear(int id);
 
 #endif //STRANGER_THINGS_UTILITIES_H

@@ -14,38 +14,40 @@
 
 #include "Utilities.h"
 
-void copy_arr(int *copy, const int *to_copy, int elems) {
-    for (int i = 0; i < elems; i++)
-        copy[i] = to_copy[i];
-}
 
 void calculate_change(int customer_id, int to_change, struct Utils utils) {
     int denominations[3] = {1, 2, 5};
 
+    printf("Calculating change %d, for customer %d \n", to_change, customer_id);
+    msg_clear(utils.cashbox_msg);
+
     while (to_change != 0) {
 
-        for (int i = 2; i >= 0; i++) {
+        for (int i = 2; i >= 0; i--) {
             while (to_change - denominations[i] >= 0 && utils.cashbox[i] > 0) {
                 to_change -= denominations[i];
                 utils.wallets[customer_id][i]++;
                 utils.cashbox[i]--;
             }
         }
-        /* Add msg receive here */
+
+        struct msgbuf message;
+        if (to_change > 0)
+            while (msgrcv(utils.cashbox_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) ==
+                   -1) {} //Wait until new payment
     }
 }
 
-
 int take_payment(int customer_id, struct Utils utils) {
     int denominations[3] = {1, 2, 5};
-    int to_pay = haircut_price;
+    int to_pay = (int) haircut_price;
 
     //copy wallet in case of trying many permutations
     int wallet_copy[3];
     copy_arr(wallet_copy, utils.wallets[customer_id], 3);
 
     //Try the exact
-    for (int i = 2; i >= 0; i++) {
+    for (int i = 2; i >= 0; i--) {
         while (to_pay - denominations[i] >= 0 && wallet_copy[i] > 0) {
             to_pay -= denominations[i];
             wallet_copy[i]--;
@@ -55,7 +57,7 @@ int take_payment(int customer_id, struct Utils utils) {
 
     //Check if could pay, if couldn't, pay more
     if (to_pay != 0) {
-        for (int i = 2; i >= 0; i++) {
+        for (int i = 2; i >= 0; i--) {
             while (to_pay > 0 && wallet_copy[i] > 0) {
                 to_pay -= denominations[i];
                 wallet_copy[i]--;
@@ -68,6 +70,10 @@ int take_payment(int customer_id, struct Utils utils) {
         utils.wallets[customer_id][i] = wallet_copy[i];
 
     /* Add msg send here */
+    struct msgbuf message;
+    message.mtype = 1;
+    message.mvalue = 1;
+    msgsnd(utils.cashbox_msg, &message, sizeof(message.mvalue), 0);
 
     return abs(to_pay);
 }
@@ -78,6 +84,7 @@ void haircut(int barber_id, int customer_id, struct Utils utils) {
     printf("Barber %d found chair \n", barber_id);
 
     int to_change = take_payment(customer_id, utils);
+    printf("Customer %d, to change, %d \n", to_change);
 
     sleep(time_of_haircut); //Give haircut
 
@@ -86,7 +93,7 @@ void haircut(int barber_id, int customer_id, struct Utils utils) {
 
 
     /* Change counting comes here */
-
+    calculate_change(customer_id, to_change, utils);
 
     printf("Barber %d finished haircut to %d customer \n", barber_id, customer_id);
 }
