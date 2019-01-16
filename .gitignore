@@ -1,7 +1,7 @@
-.idea
-cmake-build-debug/
-out/
-anita.c
+*/.idea
+*/cmake-build-debug/
+*/out/
+*/anita.c
 # Prerequisites
 *.d
 
