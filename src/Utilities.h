@@ -6,15 +6,15 @@
 #define STRANGER_THINGS_UTILITIES_H
 
 
-#define n_of_barbers 3
-#define n_of_chairs 2
-#define queue_size 5
-#define n_of_customers 8
-#define haircut_price 8
+#define N_OF_BARBERS 3
+#define N_OF_CHAIRS 2
+#define QUEUE_SIZE 5
+#define N_OF_CUSTOMERS 8
+#define HAIRCUT_PRICE 8
 
 //Time constants | time shall be given in seconds
-#define max_time_of_customer_working 10
-#define time_of_haircut 5
+#define MAX_TIME_OF_CUSTOMER_WORKING 8
+#define TIME_OF_HAIRCUT 6
 
 
 struct Utils {
@@ -22,7 +22,7 @@ struct Utils {
 
     //shared memories
     int *cashbox;
-    int (*wallets)[n_of_customers];
+    int (*wallets)[N_OF_CUSTOMERS];
 };
 
 struct msgbuf {
@@ -42,5 +42,10 @@ struct Utils utils_initializer();
 void copy_arr(int *copy, const int *to_copy, int elems);
 
 void msg_clear(int id);
+
+void queue_lock_reset(int semid);
+
+void queue_lock_down(int semid, int semnum);
+
 
 #endif //STRANGER_THINGS_UTILITIES_H

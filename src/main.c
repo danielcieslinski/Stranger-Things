@@ -11,6 +11,7 @@
 #include <zconf.h>
 #include <signal.h>
 #include <errno.h>
+#include <mqueue.h>
 
 #include "Utilities.h"
 
@@ -40,7 +41,7 @@ void calculate_change(int customer_id, int to_change, struct Utils utils) {
 
 int take_payment(int customer_id, struct Utils utils) {
     int denominations[3] = {1, 2, 5};
-    int to_pay = (int) haircut_price;
+    int to_pay = (int) HAIRCUT_PRICE;
 
     //copy wallet in case of trying many permutations
     int wallet_copy[3];
@@ -84,9 +85,9 @@ void haircut(int barber_id, int customer_id, struct Utils utils) {
     printf("Barber %d found chair \n", barber_id);
 
     int to_change = take_payment(customer_id, utils);
-    printf("Customer %d, to change, %d \n", to_change);
+    printf("Customer %d, to change, %d \n", customer_id, to_change);
 
-    sleep(time_of_haircut); //Give haircut
+    sleep(TIME_OF_HAIRCUT); //Give haircut
 
     sem_up(utils.free_chairs, 0); //Free chair
     sem_up(utils.customers_processing, customer_id); //Free customer
@@ -99,13 +100,14 @@ void haircut(int barber_id, int customer_id, struct Utils utils) {
 }
 
 int barber_check_queue(struct Utils utils) {
-//    sem_down_nowait(utils.sleeping_barbers, 0);
+    queue_lock_reset(utils.queue_lock);
+
     struct msgbuf message;
 
     if (msgrcv(utils.queue_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) == -1)
         return -1;
 
-    sem_up(utils.queue_sem, 0);
+    sem_up(utils.queue_lock, 0);
     return message.mvalue;
 }
 
@@ -116,10 +118,16 @@ void barber(int barber_id, struct Utils utils) {
 
     while (true) {
         int customer_to_cut = barber_check_queue(utils);
-        sem_up(utils.queue_lock, 0);
         if (customer_to_cut == -1) {
             sem_up(utils.sleeping_barbers, 0);
             printf("Barber %d goes to sleep \n", barber_id);
+
+
+            struct msqid_ds attr;
+            msgctl(utils.queue_msg,IPC_STAT, &attr);
+
+            printf("In queue: %d \n",(int) attr.msg_qnum);
+
             while (msgrcv(utils.customer_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) ==
                    -1); //If nobody in queue, sleep
             customer_to_cut = message.mvalue;
@@ -136,10 +144,10 @@ void customer_works(int customer_id, struct Utils utils) {
         utils.wallets[customer_id][i] += rand() % 3 + 1;
 
 
-    printf("Customers %d wallet %d %d %d \n", customer_id, utils.wallets[customer_id][0], utils.wallets[customer_id][1],
-           utils.wallets[customer_id][2]);
+//    printf("Customers %d wallet %d %d %d \n", customer_id, utils.wallets[customer_id][0], utils.wallets[customer_id][1],
+//           utils.wallets[customer_id][2]);
 
-    sleep(rand() % max_time_of_customer_working + 1);
+    sleep(rand() % MAX_TIME_OF_CUSTOMER_WORKING + 1);
 }
 
 
@@ -158,11 +166,10 @@ void customer(int customer_id, struct Utils utils) {
         customer_works(customer_id, utils);
         printf("Customer %d is ready and wants haircut \n", customer_id);
 
-        sem_down_wait(utils.queue_lock,
-                      0); //Wait until barber finishes queue check, blocks parallelity a bit, but works well
+        queue_lock_down(utils.queue_lock, 0);
 
         if (sem_down_nowait(utils.sleeping_barbers, 0)) { //wake up barber, if no free skip
-            printf("Customer %d send info to wake up barber \n", customer_id);
+//            printf("Customer %d send info to wake up barber \n", customer_id);
             msgsnd(utils.customer_msg, &message, sizeof(message.mvalue), 0);
             sem_down_wait(utils.customers_processing, customer_id);
         } else {
@@ -178,15 +185,15 @@ void customer(int customer_id, struct Utils utils) {
 
 
 int main() {
-    int to_gen = n_of_barbers + n_of_customers;
+    int to_gen = N_OF_BARBERS + N_OF_CUSTOMERS;
     struct Utils utils = utils_initializer();
 
     for (int i = 0; i < to_gen; i++) {
         if (fork() == 0) {
-            if (i < n_of_barbers)
+            if (i < N_OF_BARBERS)
                 barber(i, utils);
 
-            else customer(i - n_of_barbers, utils);
+            else customer(i - N_OF_BARBERS, utils);
         }
     }
     // Don't allow to leave orphans

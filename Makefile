@@ -7,3 +7,7 @@ build_and_run:
 	@mkdir -p out
 	gcc -o out/stranger_things src/*.c
 	out/stranger_things
+
+build:
+	@mkdir -p out
+	gcc -o out/stranger_things src/*.c
