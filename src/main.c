@@ -102,7 +102,7 @@ void haircut(int barber_id, int customer_id, struct Utils utils) {
 }
 
 int barber_check_queue(struct Utils utils) {
-    queue_lock_reset(utils.queue_lock);
+    sem_up(utils.queue_lock, 0);
 
     struct msgbuf message;
 
@@ -110,7 +110,6 @@ int barber_check_queue(struct Utils utils) {
         return -1;
 
     sem_up(utils.queue_sem, 0);
-    sem_up(utils.queue_lock, 0);
     return message.mvalue;
 }
 
@@ -121,6 +120,8 @@ void barber(int barber_id, struct Utils utils) {
 
     while (true) {
         int customer_to_cut = barber_check_queue(utils);
+        queue_lock_reset(utils.queue_lock); //Very weird behaviour, pass when 0, wait when 1
+
         if (customer_to_cut == -1) {
             sem_up(utils.sleeping_barbers, 0);
             printf("Barber %d goes to sleep \n", barber_id);
@@ -178,6 +179,7 @@ void customer(int customer_id, struct Utils utils) {
         printf("Customer %d is ready and wants haircut \n", customer_id);
 
         queue_lock_down(utils.queue_lock, 0);
+        printf("After lock %d \n", customer_id);
 
         if (sem_down_nowait(utils.sleeping_barbers, 0)) { //wake up barber, if no free skip
 //            printf("Customer %d send info to wake up barber \n", customer_id);
@@ -212,3 +214,5 @@ int main() {
 
     return 0;
 }
+
+/* TO_FIX: sem lock, cashbox */
