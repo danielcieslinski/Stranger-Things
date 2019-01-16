@@ -22,6 +22,8 @@ void calculate_change(int customer_id, int to_change, struct Utils utils) {
     printf("Calculating change %d, for customer %d \n", to_change, customer_id);
     msg_clear(utils.cashbox_msg);
 
+    printf("Cashbox %d %d %d \n", utils.cashbox[0], utils.cashbox[1], utils.cashbox[2]);
+
     while (to_change != 0) {
 
         for (int i = 2; i >= 0; i--) {
@@ -107,6 +109,7 @@ int barber_check_queue(struct Utils utils) {
     if (msgrcv(utils.queue_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) == -1)
         return -1;
 
+    sem_up(utils.queue_sem, 0);
     sem_up(utils.queue_lock, 0);
     return message.mvalue;
 }
@@ -140,8 +143,16 @@ void barber(int barber_id, struct Utils utils) {
 }
 
 void customer_works(int customer_id, struct Utils utils) {
-    for (int i = 0; i < 3; ++i)
-        utils.wallets[customer_id][i] += rand() % 3 + 1;
+    for (int i = 0; i < 3; ++i) {
+        if (i == 2)
+            utils.wallets[customer_id][i] += 2;
+
+        if (i == 0)
+            utils.wallets[customer_id][i] += 0;
+
+        if (i == 1)
+            utils.wallets[customer_id][i] += 2;
+    }
 
 
 //    printf("Customers %d wallet %d %d %d \n", customer_id, utils.wallets[customer_id][0], utils.wallets[customer_id][1],
