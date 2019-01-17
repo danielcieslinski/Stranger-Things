@@ -6,6 +6,7 @@
 #include <libzvbi.h> //NULL macro
 #include <sys/shm.h> //Shared memo
 #include <zconf.h> //Fork
+#include <stdbool.h>
 
 #include "Utilities.h"
 #include "Bees.h"
@@ -42,7 +43,10 @@ struct Utils utils_initializer() {
 
     utils.game_status = (struct GameStatus *) shmat(shmget(0, sizeof(struct GameStatus), IPC_CREAT | IPC_EXCL | 0660), NULL, 0);
 
-//    utils.wallets = shmat(shmget(IPC_PRIVATE, sizeof(int[N_OF_CUSTOMERS][3]), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
+    utils.bear_attack = (bool *) shmat(shmget(0, sizeof(bool), IPC_CREAT | IPC_EXCL | 0660), NULL, 0);
+    utils.bear_attack = false;
+
+    utils.bees = shmat(shmget(IPC_PRIVATE, sizeof(int[MAX_BEES_OF_ONE_KIND][3]), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
 
     return utils;
 

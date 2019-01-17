@@ -14,6 +14,8 @@ struct Utils {
     int out_monitor_notifications;
     int input_monitor_notifications;
     int storage_sem;
+    bool bear_attack;
+    int ** bees;
 };
 
 struct Msgbuf {
@@ -24,6 +26,8 @@ struct Msgbuf {
 typedef enum {
     WORKER, WARRIOR, QUEEN
 } BeeType;
+
+
 
 struct Utils utils_initializer();
 

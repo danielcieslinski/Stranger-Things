@@ -7,6 +7,8 @@
 #include <zconf.h> //Fork
 #include <sys/wait.h>
 #include <stdbool.h> //Bools
+#include <time.h>
+#include <math.h>
 
 #include "Utilities.h"
 #include "Bees.h"
@@ -15,20 +17,25 @@
 
 void input_monitor(struct Utils * utils){
 
+    int costs[3] = {WORKER_COST, WARRIOR_COST, QUEEN_COST};
+
     struct Msgbuf msg;
     BeeType input;
 
     printf("\n \n");
     printf("-------ACTIONS------- \n");
-    printf("0) Worker, cost: 7 H \n");
-    printf("1) Warrior, cost: 10 H \n");
-    printf("2) Queen, cost: 500 H \n");
+    printf("0) Worker, cost: %d H \n", WORKER_COST);
+    printf("1) Warrior, cost: %d H \n", WARRIOR_COST);
+    printf("2) Queen, cost: %d H \n", QUEEN_COST);
     printf("3) Refresh \n");
     printf("\n \n Enter action number \n");
 
     scanf("%d", &input);
 
-    if(input == 3)
+    if(input > 2)
+        return;
+
+    if (utils->game_status->honey - costs[input] < 0)
         return;
 
     produce_bee(utils, input);
@@ -69,17 +76,15 @@ void setup(struct Utils * utils){
 
 }
 
+
+
 int main() {
 
     struct Utils utils = utils_initializer();
     utils.game_status->honey = HONEY_INIT;
 
-    struct Msgbuf msg; msg.mvalue = 0; msg.mtype = 1;
-    msgsnd(utils.out_monitor_notifications, &msg, sizeof(msg.mvalue), 0);
-
     setup(&utils);
 
     wait(0);
-
     return 0;
 }
