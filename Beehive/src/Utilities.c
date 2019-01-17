@@ -5,8 +5,12 @@
 #include <sys/sem.h> //Semaphores
 #include <libzvbi.h> //NULL macro
 #include <sys/shm.h> //Shared memo
+#include <zconf.h> //Fork
 
 #include "Utilities.h"
+#include "Bees.h"
+
+static struct sembuf buf;
 
 struct Utils utils_initializer() {
     struct Utils utils;
@@ -25,8 +29,8 @@ struct Utils utils_initializer() {
 //                                                                     0600); // Holds info about giving haircut to every customer
 //    semctl(utils.customers_processing, 0, SETALL, 0); //Second arg is ignored
 //
-//    utils.queue_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600); // Holds info on free chairs in waiting room
-//    semctl(utils.queue_sem, 0, SETVAL, QUEUE_SIZE);
+    utils.storage_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600); // Holds info on free chairs in waiting room
+    semctl(utils.storage_sem, 0, SETVAL, STORAGE_CAPACITY);
 //
     utils.out_monitor_notifications = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); // Notify change to out monitor
     utils.input_monitor_notifications = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); // Notify change to input monitor
@@ -43,3 +47,32 @@ struct Utils utils_initializer() {
     return utils;
 
 };
+
+void refresh_monitor(struct Utils * utils){
+    if(fork() == 0)
+        output_monitor(utils);
+}
+
+
+void sem_down_wait(int semid, int semnum) {
+    buf.sem_num = (unsigned short) semnum;
+    buf.sem_op = -1;
+    buf.sem_flg = 0;
+    semop(semid, &buf, 1);
+}
+
+void sem_up(int semid, int semnum) {
+    buf.sem_num = (unsigned short) semnum;
+    buf.sem_op = 1;
+    buf.sem_flg = 0;
+    semop(semid, &buf, 1);
+}
+
+//bool sem_down_nowait(int semid, int semnum) {
+//    buf.sem_num = (unsigned short) semnum;
+//    buf.sem_op = -1;
+//    buf.sem_flg = IPC_NOWAIT;
+//    return ((semop(semid, &buf, 1) != -1));
+//    //-1 when cant push down
+//    //Returns true if sem was decremented, otherwise false
+//}
