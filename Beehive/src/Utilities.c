@@ -28,14 +28,15 @@ struct Utils utils_initializer() {
 //    utils.queue_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600); // Holds info on free chairs in waiting room
 //    semctl(utils.queue_sem, 0, SETVAL, QUEUE_SIZE);
 //
-//    utils.queue_msg = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); // Customers in queue
+    utils.out_monitor_notifications = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); // Notify change to out monitor
+    utils.input_monitor_notifications = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); // Notify change to input monitor
 //
 //    utils.cashbox_msg = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); // Customers in queue
 //
 //    utils.queue_lock = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600); // Lock while queue check
 //    semctl(utils.queue_lock, 0, SETVAL, 1);
 
-    utils.game_status = (struct GameStatus *) shmat(shmget(IPC_PRIVATE, sizeof(struct GameStatus), IPC_CREAT | IPC_EXCL | 0660), NULL, 0);
+    utils.game_status = (struct GameStatus *) shmat(shmget(0, sizeof(struct GameStatus), IPC_CREAT | IPC_EXCL | 0660), NULL, 0);
 
 //    utils.wallets = shmat(shmget(IPC_PRIVATE, sizeof(int[N_OF_CUSTOMERS][3]), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
 
