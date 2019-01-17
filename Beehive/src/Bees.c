@@ -8,7 +8,7 @@
 #include <time.h>
 #include <math.h>
 
-typedef enum{
+typedef enum {
     EATING, PRODUCING
 } AccessType;
 
@@ -22,36 +22,35 @@ void storage(struct Utils *utils, AccessType type) {
 
 void worker(struct Utils *utils) {
 
-    time_t eating_clock = clock();
-    time_t prod_clock = clock();
     AccessType type;
+    time_t eating_clock, prod_clock, now;
+
+    eating_clock = time(&eating_clock);
+    prod_clock = time(&prod_clock);
+
+    sleep(2);
 
     while (true) {
+        now = time(&now);
 
-        sleep(1);
-
-        clock_t now = clock();
-        if ( EAT_TIME - (now - eating_clock) > WORKER_HONEY_PRODUCTION_TIME - (now - prod_clock) ) {
-            printf("%f \n", (now - prod_clock));
-            sleep(WORKER_HONEY_PRODUCTION_TIME - (now - prod_clock));  //CORRECT SLEEP
+        if (EAT_TIME - difftime(now, eating_clock) > WORKER_HONEY_PRODUCTION_TIME - difftime(now, prod_clock)) {
+            sleep(WORKER_HONEY_PRODUCTION_TIME - (now - prod_clock));
             type = PRODUCING;
         } else {
-//            printf("%lf \n", EAT_TIME - (now - eating_clock));
-            sleep(EAT_TIME - (now - eating_clock));  //CORRECT SLEEP
+            sleep(EAT_TIME - (now - eating_clock));
             type = EATING;
         }
 
-        printf("smth \n");
         //Getting into magazine
-        while (utils->bear_attack) {usleep(1);}
+        while (utils->bear_attack) { usleep(1); }
 
         sem_down_wait(utils->storage_sem, 0);
         storage(utils, type);
         sem_up(utils->storage_sem, 0);
 
-        if(type == PRODUCING)
-            prod_clock = clock();
-        else eating_clock = clock();
+        if (type == PRODUCING)
+            prod_clock = time(&prod_clock);
+        else eating_clock = time(&eating_clock);
     }
 }
 
