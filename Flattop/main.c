@@ -5,7 +5,15 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/shm.h>
-#include "Utilities.h"
+
+#define PLANES 10
+#define LANDING_TIME 3
+#define TAKING_OFF_TIME 3
+#define FLATTOP_CAPACITY 5
+#define MAX_TIME_WITHOUT_ACTION 5
+
+pthread_mutex_t mut;
+pthread_cond_t cond;
 
 struct Args {
     struct Utils *utils;
@@ -13,20 +21,15 @@ struct Args {
 };
 
 struct Utils {
-    pthread_mutex_t mut;
-    pthread_cond_t cond;
-
-    int *on_flattop;
-    int *on_air;
+    int * on_flattop;
+    int * on_air;
 };
 
 struct Utils utils_initializer() {
     struct Utils utils;
 
-//    pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
-//    pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-//    utils.mut = mut;
-//    utils.cond = cond;
+    pthread_mutex_init(&mut,NULL);
+    pthread_cond_init(&cond, NULL);
 
     utils.on_air = shmat(shmget(IPC_PRIVATE, sizeof(int), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
     utils.on_flattop = shmat(shmget(IPC_PRIVATE, sizeof(int), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
@@ -40,21 +43,20 @@ void critical_section(int plane_id, int on_air, struct Utils *utils) {
 
         printf("Plane %d is landing \n", plane_id);
         sleep(LANDING_TIME);
-        utils->on_air--;
-        utils->on_flattop++;
+        (* utils->on_air)--;
+        (* utils->on_flattop)++;
         printf("Plane %d landed \n", plane_id);
 
     } else {
 
         printf("Plane %d is taking off \n", plane_id);
         sleep(TAKING_OFF_TIME);
-        utils->on_air++;
-        utils->on_flattop--;
+        (* utils->on_air)++;
+        (* utils->on_flattop)--;
         printf("Plane %d took off \n", plane_id);
-
     }
 
-
+    printf("On air: %d, On Flattop %d \n", * utils->on_air, * utils->on_flattop);
 }
 
 void *plane(void *args) {
@@ -65,37 +67,38 @@ void *plane(void *args) {
 
     //Setup
     srand(time(NULL) + plane_id);
-//    int on_air = rand() % 2;
     int on_air = true;
-
-    if (on_air) *utils.on_air += 1;
-    else *utils.on_flattop += 1;
+    (* utils.on_air)++;
 
     printf("New plane %d, on air %d \n", plane_id, on_air);
 
     //Plane loop
     while (true) {
-//        pthread_cond_broadcast(&utils.cond);
         if (on_air){
-            pthread_mutex_lock(&utils.mut);
+            pthread_mutex_lock(&mut);
             while (! (* utils.on_flattop < FLATTOP_CAPACITY)){
-                pthread_cond_wait(&utils.cond, &utils.mut);
+                pthread_cond_wait(&cond, &mut);
             }
             critical_section(plane_id, on_air, &utils);
-            pthread_mutex_unlock(&utils.mut);
+            pthread_mutex_unlock(&mut);
 
         } else {
 
-            pthread_mutex_lock(&utils.mut);
+            pthread_mutex_lock(&mut);
             while (* utils.on_flattop < FLATTOP_CAPACITY) {
-                pthread_cond_wait(&utils.cond, &utils.mut);
+                pthread_cond_wait(&cond, &mut);
             }
             critical_section(plane_id, on_air, &utils);
-            pthread_mutex_unlock(&utils.mut);
+            pthread_mutex_unlock(&mut);
         }
         on_air = !on_air;
+
+        if (* utils.on_air == * utils.on_flattop)
+            pthread_cond_broadcast(&cond);
+
+        //Do nothing for some time
+        sleep(rand() % MAX_TIME_WITHOUT_ACTION + 1);
     }
-    return NULL;
 }
 
 int main() {
