@@ -14,10 +14,19 @@ typedef enum {
 
 
 void storage(struct Utils *utils, AccessType type) {
+
+
+    //Getting into magazine
+    while (utils->bear_attack) { usleep(1);} //Change for nano
+
+    sem_down_wait(utils->storage_sem, 0);
+
     if (type == PRODUCING)
         utils->game_status->honey += WORKER_PRODUCTION_AMOUNT;
 
     else utils->game_status->honey -= EAT_AMOUNT;
+
+    sem_up(utils->storage_sem, 0);
 }
 
 void worker(struct Utils *utils) {
@@ -27,8 +36,6 @@ void worker(struct Utils *utils) {
 
     eating_clock = time(&eating_clock);
     prod_clock = time(&prod_clock);
-
-    sleep(2);
 
     while (true) {
         now = time(&now);
@@ -41,12 +48,7 @@ void worker(struct Utils *utils) {
             type = EATING;
         }
 
-        //Getting into magazine
-        while (utils->bear_attack) { usleep(1); }
-
-        sem_down_wait(utils->storage_sem, 0);
         storage(utils, type);
-        sem_up(utils->storage_sem, 0);
 
         if (type == PRODUCING)
             prod_clock = time(&prod_clock);
@@ -56,9 +58,20 @@ void worker(struct Utils *utils) {
 
 void warrior(struct Utils *utils) {
 
+    while (true){
+        sleep(14);
+        storage(utils, EATING);
+    }
+
 }
 
 void queen(struct Utils *utils) {
+
+    while (true)
+        sleep(1);
+
+    /*It does nothing */
+
 
 }
 

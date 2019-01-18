@@ -26,8 +26,6 @@
 
 void worker(struct Utils * utils);
 
-long to_mili(time_t t);
-
 void warrior(struct Utils * utils);
 
 void queen(struct Utils * utils);

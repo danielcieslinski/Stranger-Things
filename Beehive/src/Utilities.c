@@ -3,7 +3,7 @@
 
 #include <sys/msg.h> //Message Queue
 #include <sys/sem.h> //Semaphores
-#include <libzvbi.h> //NULL macro
+//#include <libzvbi.h> //NULL macro
 #include <sys/shm.h> //Shared memo
 #include <zconf.h> //Fork
 #include <stdbool.h>
@@ -51,11 +51,6 @@ struct Utils utils_initializer() {
     return utils;
 
 };
-
-void refresh_monitor(struct Utils * utils){
-    if(fork() == 0)
-        output_monitor(utils);
-}
 
 
 void sem_down_wait(int semid, int semnum) {

@@ -88,3 +88,6 @@ int main() {
     wait(0);
     return 0;
 }
+
+
+//https://docs.google.com/document/d/18qK-LDqTdCfkSwHXYAKuolfmTBdQeMraAxqfz3qNTUk/edit?fbclid=IwAR2LFSU5ehwvw0qpMPEhCJi8Fi881O5LvGKBlSLXa6Fycsx8sOqGHoRt8R4
