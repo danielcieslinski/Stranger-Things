@@ -1,0 +1,7 @@
+PRZYJĘTA KONWENCJA:
+Cały kod napisany jest w języku angielskim. 
+
+Struktury oraz definicje typów nazywane są UpperCamelCase-m, jestem świadomy, że konwecji nazewnictwa struktur w C, to lower_case, jednak uważam, to za mało czytelne. Cała reszta napisana jest w lower_casie, oczywiście z wyjątkiem stałych.
+
+
+W przypadku pszczoły robotnicy, w treści zadania brak specyfikacji, czy wchodzenie do magazynu w celu pobrania jedzenia zeruje produkowanie miodu. Założyłem, że nie, tzn odbywa się to niezależnie, ale w ramach jednego wątku. 

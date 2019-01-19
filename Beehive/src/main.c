@@ -12,6 +12,9 @@
 
 #include "Utilities.h"
 #include "Bees.h"
+#include "Bears.h"
+
+
 
 
 
@@ -19,7 +22,6 @@ void input_monitor(struct Utils * utils){
 
     int costs[3] = {WORKER_COST, WARRIOR_COST, QUEEN_COST};
 
-    struct Msgbuf msg;
     BeeType input;
 
     printf("\n \n");
@@ -44,8 +46,6 @@ void input_monitor(struct Utils * utils){
 
 void output_monitor(struct Utils * utils){
 
-    struct Msgbuf msg;
-
     while(true){
         system("clear");
 
@@ -65,25 +65,17 @@ void output_monitor(struct Utils * utils){
     }
 }
 
-void setup(struct Utils * utils){
-
-//    if(fork() == 0)
-//        input_monitor(utils);
-
-
-    if (fork() == 0)
-        output_monitor(utils);
-
-}
-
-
 
 int main() {
 
     struct Utils utils = utils_initializer();
     utils.game_status->honey = HONEY_INIT;
 
-    setup(&utils);
+    if (fork() == 0)
+        bear(&utils);
+
+    if (fork() == 0)
+        output_monitor(&utils);
 
     wait(0);
     return 0;
