@@ -36,8 +36,7 @@ void calculate_change(int customer_id, int to_change, struct Utils utils) {
 
         struct msgbuf message;
         if (to_change > 0)
-            while (msgrcv(utils.cashbox_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) ==
-                   -1) {} //Wait until new payment
+            msgrcv(utils.cashbox_msg, &message, sizeof(message.mvalue), 1, 0); //Wait until new payment
     }
 }
 
@@ -81,8 +80,8 @@ int take_payment(int customer_id, struct Utils utils) {
 
     /* Add msg send here */
     struct msgbuf message;
-    message.mtype = 1;
-    message.mvalue = 1;
+    message.mtype = 0;
+    message.mvalue = 0;
     msgsnd(utils.cashbox_msg, &message, sizeof(message.mvalue), 0);
 
     return abs(to_pay);
@@ -137,8 +136,7 @@ void barber(int barber_id, struct Utils utils) {
 //
 //            printf("In queue: %d \n",(int) attr.msg_qnum);
 
-            while (msgrcv(utils.customer_msg, &message, sizeof(message.mvalue), 1, IPC_NOWAIT) ==
-                   -1); //If nobody in queue, sleep
+            msgrcv(utils.customer_msg, &message, sizeof(message.mvalue), 1, 0); //If nobody in queue, sleep
             customer_to_cut = message.mvalue;
             printf("Customer %d wakes up barber %d \n", customer_to_cut, barber_id);
         }
