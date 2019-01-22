@@ -5,9 +5,9 @@ clean:
 
 build_and_run:
 	@mkdir -p out
-	gcc -o out/stranger_things src/*.c
-	out/stranger_things
+	gcc -o out/barbers src/*.c
+	out/barbers
 
 build:
 	@mkdir -p out
-	gcc -o out/stranger_things src/*.c
+	gcc -o out/barbers src/*.c
