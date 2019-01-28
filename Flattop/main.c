@@ -7,13 +7,13 @@
 #include <sys/shm.h>
 
 #define PLANES 10
-#define LANDING_TIME 3
-#define TAKING_OFF_TIME 3
+#define LANDING_TIME 0
+#define TAKING_OFF_TIME 0
 #define FLATTOP_CAPACITY 5
 #define MAX_TIME_WITHOUT_ACTION 5
 
 pthread_mutex_t mut;
-pthread_cond_t cond;
+pthread_cond_t free_space_cond, priority_cond;
 
 struct Args {
     struct Utils *utils;
@@ -29,7 +29,8 @@ struct Utils utils_initializer() {
     struct Utils utils;
 
     pthread_mutex_init(&mut,NULL);
-    pthread_cond_init(&cond, NULL);
+    pthread_cond_init(&free_space_cond, NULL);
+    pthread_cond_init(&priority_cond, NULL);
 
     utils.on_air = shmat(shmget(IPC_PRIVATE, sizeof(int), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
     utils.on_flattop = shmat(shmget(IPC_PRIVATE, sizeof(int), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
@@ -74,30 +75,30 @@ void *plane(void *args) {
 
     //Plane loop
     while (true) {
-        if (on_air){
+        if (on_air){ //Landing
             pthread_mutex_lock(&mut);
-            while (! (* utils.on_flattop < FLATTOP_CAPACITY)){
-                pthread_cond_wait(&cond, &mut);
+            if (* utils.on_flattop == FLATTOP_CAPACITY){
+                pthread_cond_wait(&free_space_cond, &mut);
             }
             critical_section(plane_id, on_air, &utils);
             pthread_mutex_unlock(&mut);
 
         } else {
-
             pthread_mutex_lock(&mut);
-            while (* utils.on_flattop < FLATTOP_CAPACITY) {
-                pthread_cond_wait(&cond, &mut);
-            }
+//            while (* utils.on_flattop < FLATTOP_CAPACITY) {
+//                pthread_cond_wait(&cond, &mut);
+//            }
             critical_section(plane_id, on_air, &utils);
             pthread_mutex_unlock(&mut);
+            pthread_cond_broadcast(&free_space_cond);
         }
         on_air = !on_air;
 
-        if (* utils.on_air == * utils.on_flattop)
-            pthread_cond_broadcast(&cond);
+//        if (* utils.on_air == * utils.on_flattop)
+//            pthread_cond_broadcast(&cond);
 
         //Do nothing for some time
-        sleep(rand() % MAX_TIME_WITHOUT_ACTION + 1);
+//        sleep(rand() % MAX_TIME_WITHOUT_ACTION + 1);
     }
 }
 
