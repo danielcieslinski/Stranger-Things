@@ -12,7 +12,7 @@
 #define FLATTOP_CAPACITY 5
 #define MAX_TIME_WITHOUT_ACTION 5
 
-pthread_mutex_t mut;
+pthread_mutex_t mut, check_mut;
 pthread_cond_t free_space_cond, priority_cond;
 
 struct Args {
@@ -20,20 +20,31 @@ struct Args {
     int plane_id;
 };
 
+typedef enum {
+    LANDING, TAKING_OFF
+} Priority;
+
 struct Utils {
     int * on_flattop;
     int * on_air;
+    Priority * priority;
 };
+
 
 struct Utils utils_initializer() {
     struct Utils utils;
 
     pthread_mutex_init(&mut,NULL);
+    pthread_mutex_init(&check_mut,NULL);
     pthread_cond_init(&free_space_cond, NULL);
     pthread_cond_init(&priority_cond, NULL);
 
     utils.on_air = shmat(shmget(IPC_PRIVATE, sizeof(int), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
     utils.on_flattop = shmat(shmget(IPC_PRIVATE, sizeof(int), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
+    utils.priority = shmat(shmget(IPC_PRIVATE, sizeof(Priority), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
+
+    * utils.priority = LANDING;
+
 
     return utils;
 }
@@ -76,8 +87,12 @@ void *plane(void *args) {
     //Plane loop
     while (true) {
         if (on_air){ //Landing
+
+            pthread_mutex_lock(&check_mut); * utils.wants_to_land = true; pthread_mutex_unlock(&check_mut);
+
             pthread_mutex_lock(&mut);
             if (* utils.on_flattop == FLATTOP_CAPACITY){
+                pthread_mutex_lock(&check_mut); * utils.wants_to_land = false; pthread_mutex_unlock(&check_mut);
                 pthread_cond_wait(&free_space_cond, &mut);
             }
             critical_section(plane_id, on_air, &utils);
@@ -85,6 +100,11 @@ void *plane(void *args) {
 
         } else {
             pthread_mutex_lock(&mut);
+            pthread_mutex_lock(&check_mut);
+            if (* utils.wants_to_land == true) {
+                pthread_mutex_unlock(&check_mut);
+                pthread
+            }
 //            while (* utils.on_flattop < FLATTOP_CAPACITY) {
 //                pthread_cond_wait(&cond, &mut);
 //            }
