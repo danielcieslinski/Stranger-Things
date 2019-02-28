@@ -7,10 +7,10 @@
 #include <sys/shm.h>
 
 #define PLANES 10
-#define LANDING_TIME 0
-#define TAKING_OFF_TIME 0
+#define LANDING_TIME 3
+#define TAKING_OFF_TIME 3
 #define FLATTOP_CAPACITY 5
-#define MAX_TIME_WITHOUT_ACTION 5
+#define MAX_TIME_WITHOUT_ACTION 10
 
 pthread_mutex_t mut, check_mut;
 pthread_cond_t free_space_cond, priority_cond;
@@ -20,14 +20,10 @@ struct Args {
     int plane_id;
 };
 
-typedef enum {
-    LANDING, TAKING_OFF
-} Priority;
-
 struct Utils {
     int * on_flattop;
     int * on_air;
-    Priority * priority;
+    bool * wants_to_land;
 };
 
 
@@ -41,10 +37,7 @@ struct Utils utils_initializer() {
 
     utils.on_air = shmat(shmget(IPC_PRIVATE, sizeof(int), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
     utils.on_flattop = shmat(shmget(IPC_PRIVATE, sizeof(int), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
-    utils.priority = shmat(shmget(IPC_PRIVATE, sizeof(Priority), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
-
-    * utils.priority = LANDING;
-
+    utils.wants_to_land = shmat(shmget(IPC_PRIVATE, sizeof(bool), IPC_CREAT | IPC_EXCL | 0660), 0, 0);
 
     return utils;
 }
@@ -71,6 +64,12 @@ void critical_section(int plane_id, int on_air, struct Utils *utils) {
     printf("On air: %d, On Flattop %d \n", * utils->on_air, * utils->on_flattop);
 }
 
+void atomic_set(pthread_mutex_t * mut, bool * var, bool val){
+    pthread_mutex_lock(mut);
+    * var = val;
+    pthread_mutex_unlock(mut);
+}
+
 void *plane(void *args) {
     //Some cleanup
     struct Args *args1 = (struct Args *) args;
@@ -88,37 +87,30 @@ void *plane(void *args) {
     while (true) {
         if (on_air){ //Landing
 
-            pthread_mutex_lock(&check_mut); * utils.wants_to_land = true; pthread_mutex_unlock(&check_mut);
+            atomic_set(&check_mut, utils.wants_to_land, true);
 
             pthread_mutex_lock(&mut);
             if (* utils.on_flattop == FLATTOP_CAPACITY){
-                pthread_mutex_lock(&check_mut); * utils.wants_to_land = false; pthread_mutex_unlock(&check_mut);
+                atomic_set(&check_mut, utils.wants_to_land, false);
                 pthread_cond_wait(&free_space_cond, &mut);
             }
             critical_section(plane_id, on_air, &utils);
             pthread_mutex_unlock(&mut);
+            pthread_cond_signal(&priority_cond);
 
         } else {
             pthread_mutex_lock(&mut);
             pthread_mutex_lock(&check_mut);
             if (* utils.wants_to_land == true) {
                 pthread_mutex_unlock(&check_mut);
-                pthread
+                pthread_cond_wait(&priority_cond, &mut);
             }
-//            while (* utils.on_flattop < FLATTOP_CAPACITY) {
-//                pthread_cond_wait(&cond, &mut);
-//            }
             critical_section(plane_id, on_air, &utils);
             pthread_mutex_unlock(&mut);
             pthread_cond_broadcast(&free_space_cond);
         }
         on_air = !on_air;
-
-//        if (* utils.on_air == * utils.on_flattop)
-//            pthread_cond_broadcast(&cond);
-
-        //Do nothing for some time
-//        sleep(rand() % MAX_TIME_WITHOUT_ACTION + 1);
+        sleep(rand() % MAX_TIME_WITHOUT_ACTION);
     }
 }
 
