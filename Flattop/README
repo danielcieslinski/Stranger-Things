@@ -1,0 +1,31 @@
+Projekt jest rozwiązaniem zadania "Lotniskowiec"
+
+URUCHAMIANIE:
+Folder zawiera Makefile:
+make build_and_run - kompiluj i uruchom
+make build - kompiluje, program znajduje się w w folderze out
+make clean - usuwa folder out
+
+Program został napisany w C, głównie z użyciem mechanizmów pthreads, z IPC użyłem tylko pamięci współdzielonej.
+
+Stałe są zdefiniowane na początku pliku dyrektywą #define
+
+SEKCJA KRYTYCZNA:
+Wejście do sekcji jest rozbite na dwa bloki kiedy samolot jest w powietrzu i kiedy na pasie.
+
+W POWIETRZU:
+1. Atomowo ustaw zmienną "wants_to_land" na true, aby w przypadku priorytetu sekcja została zwolniona dla tego samolotu.
+2. Blokuj mutex sekcji krytycznej
+3. Zmienia want_to_land na false, ponieważ już znalazł się w sekcji
+4. Sprawdza czy może wylądować, jak nie, to czeka
+5. Ląduje
+6. Odblokowuje mutex i budzi proces, który ewentaulnie zwolnił dla niego sekcję krytyczną z powodu priorytetu
+
+NA LOTNISKOWCU:
+1. Blokuj mutex
+2. Sprawdź czy inny samlot ma priorytet, jeżeli tak, to czeka
+3. Wybudzony przechodzi do sekcji krytycznej
+4. Odblokowuje mutex
+5. Budzi samolot który nie mógł wylądować, bo nie było miejsc na lotniskowcu
+
+Pozostałe części programu są stosunkowo prosto, mam nadzieję, że nie ma potrzeby ich opisywać. W razie potrzeby proszę o maila

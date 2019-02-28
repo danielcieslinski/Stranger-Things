@@ -90,8 +90,8 @@ void *plane(void *args) {
             atomic_set(&check_mut, utils.wants_to_land, true);
 
             pthread_mutex_lock(&mut);
+            atomic_set(&check_mut, utils.wants_to_land, false);
             if (* utils.on_flattop == FLATTOP_CAPACITY){
-                atomic_set(&check_mut, utils.wants_to_land, false);
                 pthread_cond_wait(&free_space_cond, &mut);
             }
             critical_section(plane_id, on_air, &utils);
@@ -110,7 +110,7 @@ void *plane(void *args) {
             pthread_cond_broadcast(&free_space_cond);
         }
         on_air = !on_air;
-        sleep(rand() % MAX_TIME_WITHOUT_ACTION);
+        sleep(rand() % MAX_TIME_WITHOUT_ACTION); //Wait some random time
     }
 }
 
