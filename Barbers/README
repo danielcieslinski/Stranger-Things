@@ -1,0 +1,90 @@
+Projekt jest rozwiązniem problemu śpiącego golibrody z dodaniem problemu kasy. Zadanie 1.1.5
+
+URUCHAMIANIE:
+Folder zawiera Makefile:
+make build_and_run - kompiluj i uruchom
+make build - kompiluje, program znajduje się w w folderze out
+make clean - usuwa folder out
+
+Program został napisany w C, z użyciem mechanizmów IPC
+
+Opis działania poszczególnych wątków:
+
+KLIENT:
+1. Klient pracuje (dodaje pieniądze do swojego portfela i śpi losową ilość czasu)
+
+2. Klient sprawdza, czy fryzjer nie sprawdza kolejki, aby zapobiec deadlockowi związanego z problemem kolejki, jeżeli tak, to czeka, aż fryzjer skończy
+
+3. Sprawdza czy jest śpiący fryzjer, jeżeli tak, to go budzi (wysyła komunikat)
+
+4. Następnie opuszcza swój semafor, który po zakończeniu usługi zostanie podniesiony przez fryzjera. Każdy klient ma swój semafor, tzn jest tablica semaforów o długości równej ilości klientów
+
+5. Jeżeli nie było śpiącego fryzjera, klient opuszcza semafor kolejki i wysyła komunikat, do kolejki komunikatów, odpowiedzialnej za kolejkę
+
+6. Opuszcza swój semafor, tak jak w punkcie 4
+
+7. Jeżeli nie było ani miejsca w kolejce, ani żadnego śpiącego fryzjera, idzie znowu pracować
+
+FRYZJER:
+
+1. Fryzjer śpi (czeka na odbiór komunikatu)
+
+2. Wybudzony sprawdza id klienta przez którego został obudzony (ID jest wysłane kolejką komunikatów) i przechodzi do procedury haircut()
+
+--HAIRCUT--
+
+1. Fryzjer opuszcza semafor krzesła, czyli jak nie ma wolnego to czeka
+
+2. Pobiera opłatę (O tym później)
+
+3. Śpi przez czas TIME_OF_HAIRCUT 
+
+4. Oblicza resztę (O tym również później)
+
+5. Podnosi semafor klienta
+
+--END HAIRCUT--
+
+3. Sprawdza kolejkę (Odbiera komunikat, bez czekania, jeżeli kolejka jest pusta, fryzjer idzie spać)
+
+PŁATNOŚĆ:
+
+Przyjąłem, że dostępne nominały to: 1, 2, 5.
+Klienci zarabiają losową liczbę każdego nominału, modulo 3, dzięki takiemu rozwiązaniu cały kod odnośnie płatności ma w miarę sens, bo jeżeli każdego nominału zarabialiby przynajmiej 1, to zawsze intniałaby płatność dokładna (Z założeniem, że koszt usługi to 8). 
+
+--POBIERANIE PŁATNOŚCI--
+1. Kopiowany jest portfel klienta
+
+2. Opuszczamy semafor kasy, tak aby inny proces nie zmienił nic w czasie pobierania opłaty
+
+3. Kopiowana jest kasa ( Kopiowanie jest dlatego, że próbowane są różne możliwości)
+
+4. Próbowane jest pobranie dokładne, czyli w przypadku kosztu usługi 8: Jedna jedyna, jedna dwójka i jedna piątka
+
+5. Jeżeli nie udało pobrać się dokładnej sumy, klient płaci więcej
+
+6. Przypisywany jest stan kasy z kopii
+
+7. Podnosimy semafor binarny kasy
+
+8. Wyślij sygnał że pobrano opłatę( Kolejka opisana poniżej)
+
+8. Funckcja zwraca wartość jaką należy wydać klientowi
+
+--WYDAWANIE RESZTY--    
+
+1. Wyczyść kolejkę komunikatów (służy ona do tego, że jeżeli nie uda wydać się reszty, proces będzie czekał na sygnał, że została pobrana opłata przez inny proces) 
+
+2. Dopóki wartość do wydania jest różna od zera, proces opuszcza semafor kasy. Następnie próbuje wydać pięniądze, zaczynając od największych wartości.
+
+3. Podnosi semafor kasy
+
+4. Jeżeli nie udało się, czeka na sygnał. Po odebraniu znowu opuszcza semafor, próbuje wydać itd...
+
+Stałe zdefiniowane są w pliku Utilities.h
+
+
+
+
+
+

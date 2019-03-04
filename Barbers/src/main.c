@@ -26,6 +26,7 @@ void calculate_change(int customer_id, int to_change, struct Utils utils) {
 
     while (to_change != 0) {
 
+        sem_down_wait(utils.cashbox_lock, 0);
         for (int i = 2; i >= 0; i--) {
             while (to_change - denominations[i] >= 0 && utils.cashbox[i] > 0) {
                 to_change -= denominations[i];
@@ -33,6 +34,7 @@ void calculate_change(int customer_id, int to_change, struct Utils utils) {
                 utils.cashbox[i]--;
             }
         }
+        sem_up(utils.cashbox_lock, 0);
 
         struct msgbuf message;
         if (to_change > 0)
@@ -47,6 +49,7 @@ int take_payment(int customer_id, struct Utils utils) {
     //copy wallet in case of trying many permutations
     int wallet_copy[3], cashbox_copy[3];
     copy_arr(wallet_copy, utils.wallets[customer_id], 3);
+    sem_down_wait(utils.cashbox_lock,0);
     copy_arr(cashbox_copy, utils.cashbox, 3);
 
     //Try the exact
@@ -74,6 +77,7 @@ int take_payment(int customer_id, struct Utils utils) {
 
     for (int i = 0; i < 3; i++)
         utils.cashbox[i] = cashbox_copy[i];
+    sem_up(utils.cashbox_lock,0);
 
     for (int i = 0; i < 3; i++)
         utils.wallets[customer_id][i] = wallet_copy[i];
@@ -125,16 +129,11 @@ void barber(int barber_id, struct Utils utils) {
 
     while (true) {
         int customer_to_cut = barber_check_queue(utils);
-        queue_lock_reset(utils.queue_lock); //Very weird behaviour, pass when 0, wait when 1
+        queue_lock_reset(utils.queue_lock);
 
         if (customer_to_cut == -1) {
-            sem_up(utils.sleeping_barbers, 0);
+            sem_up(utils.sleeping_barbers, 0); //In beggining barber is here, because is forked before clients
             printf("Barber %d goes to sleep \n", barber_id);
-
-//            struct msqid_ds attr;
-//            msgctl(utils.queue_msg,IPC_STAT, &attr);
-//
-//            printf("In queue: %d \n",(int) attr.msg_qnum);
 
             msgrcv(utils.customer_msg, &message, sizeof(message.mvalue), 1, 0); //If nobody in queue, sleep
             customer_to_cut = message.mvalue;

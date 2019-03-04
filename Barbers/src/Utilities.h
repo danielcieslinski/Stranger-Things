@@ -18,7 +18,7 @@
 
 
 struct Utils {
-    int queue_msg, customer_msg, sleeping_barbers, free_chairs, customers_processing, queue_sem, queue_lock, cashbox_msg;
+    int queue_msg, customer_msg, sleeping_barbers, free_chairs, customers_processing, queue_sem, queue_lock, cashbox_msg, cashbox_lock;
 
     //shared memories
     int *cashbox;

@@ -44,7 +44,10 @@ struct Utils utils_initializer() {
     utils.cashbox_msg = msgget(IPC_PRIVATE, IPC_CREAT | IPC_EXCL | IPC_NOWAIT | 0600); // Customers in queue
 
     utils.queue_lock = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600); // Lock while queue check
-    semctl(utils.queue_lock, 0, SETVAL, 1);
+    semctl(utils.queue_lock, 0, SETVAL, 0);
+
+    utils.cashbox_lock = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0600); // Lock while queue check
+    semctl(utils.cashbox_lock , 0, SETVAL, 1);
 
     utils.cashbox = (int *) shmat(shmget(IPC_PRIVATE, 3 * sizeof(int), IPC_CREAT | IPC_EXCL | 0660), NULL, 0);
 
